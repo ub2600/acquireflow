@@ -592,6 +592,41 @@ def health():
                     "version":"1.0.0"})
 
 
+@app.post("/api/settings/apikey")
+def save_api_key():
+    data = request.get_json(force=True) or {}
+    key = str(data.get("api_key", "")).strip()
+    if not key:
+        return jsonify({"error": "api_key is required"}), 400
+
+    # Write to .env file next to the app
+    env_path = os.path.join(APP_DIR, ".env")
+    try:
+        lines = []
+        found = False
+        if os.path.exists(env_path):
+            with open(env_path, "r") as f:
+                for line in f:
+                    if line.strip().startswith("COMPANIES_HOUSE_API_KEY"):
+                        lines.append(f"COMPANIES_HOUSE_API_KEY={key}\n")
+                        found = True
+                    else:
+                        lines.append(line)
+        if not found:
+            lines.append(f"COMPANIES_HOUSE_API_KEY={key}\n")
+
+        with open(env_path, "w") as f:
+            f.writelines(lines)
+
+        # Reload into the running process
+        os.environ["COMPANIES_HOUSE_API_KEY"] = key
+        logger.info("API key updated via UI")
+        return jsonify({"success": True, "message": "API key saved and activated."})
+    except Exception as e:
+        logger.error("Failed to save API key: %s", e)
+        return jsonify({"error": f"Failed to save: {e}"}), 500
+
+
 # ── Export helpers ───────────────────────────────────────────────────────────────
 
 def _flatten(r, idx):

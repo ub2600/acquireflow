@@ -73,13 +73,68 @@
     <div id="historyList"></div>
   </div>
 
+  <div class="sidebar-section">
+    <h3>Settings <span id="apiStatus" class="api-status"></span></h3>
+    <div id="apiKeySection">
+      <label>Companies House API Key
+        <div class="api-key-row">
+          <input type="password" id="apiKeyInput" placeholder="Paste your API key" />
+          <button class="btn btn-primary btn-sm" id="saveKeyBtn" onclick="saveApiKey()">Save</button>
+        </div>
+        <span class="hint">Free key from <a href="https://developer.company-information.service.gov.uk" target="_blank" style="color:var(--accent)">developer.company-information.service.gov.uk</a></span>
+      </label>
+    </div>
+  </div>
+
   <div class="sidebar-footer">
     <button class="btn btn-ghost btn-sm" onclick="clearCache()">Clear Cache</button>
-    <span id="apiStatus" class="api-status"></span>
+    <span class="sidebar-ver">v1.0.0</span>
   </div>
 </aside>
 
 <main id="main">
+
+  <!-- API Key Setup Banner (shown when no key) -->
+  <div id="setupBanner" class="setup-banner hidden">
+    <div class="setup-card">
+      <div class="setup-icon">🔑</div>
+      <h2>Set Up Your API Key</h2>
+      <p>AcquireFlow needs a <strong>free</strong> Companies House API key to search. It takes about 2 minutes to get one.</p>
+      <div class="setup-steps">
+        <div class="setup-step">
+          <span class="step-num">1</span>
+          <div>
+            <strong>Create an account</strong>
+            <p>Go to <a href="https://developer.company-information.service.gov.uk" target="_blank">developer.company-information.service.gov.uk</a> and sign up for free.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <span class="step-num">2</span>
+          <div>
+            <strong>Create an application</strong>
+            <p>Click "Create an application" and give it any name (e.g. "AcquireFlow").</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <span class="step-num">3</span>
+          <div>
+            <strong>Copy your API key</strong>
+            <p>It looks like: <code>b5274042-84f5-4979-860d-ff382c74a2d3</code></p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <span class="step-num">4</span>
+          <div>
+            <strong>Paste it below</strong>
+            <div class="setup-key-row">
+              <input type="text" id="setupKeyInput" placeholder="Paste your API key here" />
+              <button class="btn btn-primary" id="setupSaveBtn" onclick="saveApiKeyFromSetup()">Activate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="emptyState" class="empty-state">
     <svg width="72" height="72" viewBox="0 0 72 72" fill="none">

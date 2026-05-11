@@ -231,14 +231,72 @@ async function clearCache() {
   alert(d.message);
 }
 
+// ── API Key Management ──────────────────────────────────────────────────────
+
+async function saveApiKey() {
+  const input = document.getElementById("apiKeyInput");
+  const key   = input.value.trim();
+  if (!key) { alert("Please paste your API key."); return; }
+  await _saveKey(key);
+  input.value = "";
+}
+
+async function saveApiKeyFromSetup() {
+  const input = document.getElementById("setupKeyInput");
+  const key   = input.value.trim();
+  if (!key) { alert("Please paste your API key."); return; }
+  const ok = await _saveKey(key);
+  if (ok) {
+    hide("setupBanner");
+    show("emptyState");
+  }
+}
+
+async function _saveKey(key) {
+  const btn = document.getElementById("saveKeyBtn");
+  const setupBtn = document.getElementById("setupSaveBtn");
+  [btn, setupBtn].forEach(b => { if(b) { b.disabled = true; b.textContent = "Saving…"; }});
+
+  try {
+    const res  = await fetch("/api/settings/apikey", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({api_key: key})
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to save");
+    updateApiStatus(true);
+    return true;
+  } catch(err) {
+    alert("Error saving API key: " + err.message);
+    return false;
+  } finally {
+    [btn, setupBtn].forEach(b => { if(b) { b.disabled = false; }});
+    if(btn) btn.textContent = "Save";
+    if(setupBtn) setupBtn.textContent = "Activate";
+  }
+}
+
+function updateApiStatus(configured) {
+  const el = document.getElementById("apiStatus");
+  if (configured) {
+    el.textContent = "✓ Connected";
+    el.className   = "api-status ok";
+  } else {
+    el.textContent = "⚠ No key";
+    el.className   = "api-status err";
+  }
+}
+
+// ── View helpers ────────────────────────────────────────────────────────────
+
 function showProgress() {
-  show("progressSection"); hide("emptyState"); hide("resultsSection");
+  show("progressSection"); hide("emptyState"); hide("resultsSection"); hide("setupBanner");
   document.getElementById("progressBar").style.width = "0%";
   document.getElementById("progressMsg").textContent = "Initialising…";
   ["statFound","statProcessed","statMet"].forEach(id => document.getElementById(id).textContent = "0");
 }
-function showResults()   { show("resultsSection"); hide("emptyState"); hide("progressSection"); }
-function showEmptyState(){ show("emptyState"); hide("progressSection"); hide("resultsSection"); }
+function showResults()   { show("resultsSection"); hide("emptyState"); hide("progressSection"); hide("setupBanner"); }
+function showEmptyState(){ show("emptyState"); hide("progressSection"); hide("resultsSection"); hide("setupBanner"); }
 function show(id){ document.getElementById(id).classList.remove("hidden"); }
 function hide(id){ document.getElementById(id).classList.add("hidden"); }
 function resetBtn(){
@@ -252,9 +310,13 @@ function esc(s){ return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;")
 (async () => {
   try {
     const d = await (await fetch("/api/health")).json();
-    const el = document.getElementById("apiStatus");
-    el.textContent = d.api_key_configured ? "✓ API key set" : "⚠ No API key";
-    el.className   = "api-status " + (d.api_key_configured ? "ok" : "err");
+    updateApiStatus(d.api_key_configured);
+    if (!d.api_key_configured) {
+      // First-time setup: show the setup banner, hide empty state
+      show("setupBanner");
+      hide("emptyState");
+    }
   } catch(e){}
   await loadHistory();
 })();
+
