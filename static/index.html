@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AcquireFlow – UK Acquisition Target Finder</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="#4A90D9" stroke-width="2"/>
+        <path d="M8 14 L14 8 L20 14 L14 20 Z" fill="#4A90D9"/>
+        <circle cx="14" cy="14" r="3" fill="white"/>
+      </svg>
+      <span>AcquireFlow</span>
+    </div>
+    <p class="tagline">UK Company Acquisition Finder</p>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>New Search</h3>
+    <div id="searchForm">
+      <label>SIC Code
+        <input type="text" id="sic_code" placeholder="e.g. 49320" />
+        <span class="hint">Find codes at siccode.co.uk</span>
+      </label>
+      <label>Postcode / Town
+        <input type="text" id="postcode" placeholder="e.g. SW1A 1AA" />
+      </label>
+      <label>Radius (miles)
+        <div class="range-row">
+          <input type="range" id="radius_miles" min="1" max="100" value="25" />
+          <span id="radius_val">25 mi</span>
+        </div>
+      </label>
+      <label>Min Director Age
+        <div class="range-row">
+          <input type="range" id="min_director_age" min="18" max="80" value="40" />
+          <span id="dir_age_val">40</span>
+        </div>
+      </label>
+      <label>Min Company Age (years)
+        <div class="range-row">
+          <input type="range" id="min_company_age" min="0" max="50" value="5" />
+          <span id="co_age_val">5 yrs</span>
+        </div>
+      </label>
+      <label>Max Companies to Fetch
+        <select id="max_results">
+          <option value="100">100</option>
+          <option value="250">250</option>
+          <option value="500" selected>500</option>
+          <option value="1000">1 000</option>
+          <option value="2000">2 000</option>
+        </select>
+      </label>
+      <button id="searchBtn" class="btn btn-primary" onclick="startSearch()">
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <circle cx="6.5" cy="6.5" r="5" stroke="white" stroke-width="1.5" fill="none"/>
+          <path d="M11 11 L15 15" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Search
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <h3>Past Searches <button class="btn-link" onclick="loadHistory()">↻</button></h3>
+    <div id="historyList"></div>
+  </div>
+
+  <div class="sidebar-footer">
+    <button class="btn btn-ghost btn-sm" onclick="clearCache()">Clear Cache</button>
+    <span id="apiStatus" class="api-status"></span>
+  </div>
+</aside>
+
+<main id="main">
+
+  <div id="emptyState" class="empty-state">
+    <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+      <circle cx="36" cy="36" r="34" stroke="#4A90D9" stroke-width="2" stroke-dasharray="6 4"/>
+      <path d="M22 36 L36 22 L50 36 L36 50 Z" fill="#4A90D9" opacity="0.25"/>
+      <path d="M22 36 L36 22 L50 36 L36 50 Z" stroke="#4A90D9" stroke-width="2" fill="none"/>
+      <circle cx="36" cy="36" r="5" fill="#4A90D9"/>
+    </svg>
+    <h2>Find UK acquisition targets</h2>
+    <p>Search Companies House by SIC code and location to surface companies that meet your director age and company age criteria.</p>
+    <div class="feature-grid">
+      <div class="feature-card">🏢 Live Companies House data</div>
+      <div class="feature-card">📍 Haversine radius filtering</div>
+      <div class="feature-card">👤 Director age estimation</div>
+      <div class="feature-card">📊 Buy score 1–10</div>
+      <div class="feature-card">📥 CSV &amp; Excel export</div>
+      <div class="feature-card">💾 24hr local caching</div>
+    </div>
+  </div>
+
+  <div id="progressSection" class="progress-section hidden">
+    <div class="progress-card">
+      <h2 id="progressTitle">Searching…</h2>
+      <div class="progress-bar-wrap">
+        <div id="progressBar" class="progress-bar" style="width:0%"></div>
+      </div>
+      <p id="progressMsg" class="progress-msg">Initialising…</p>
+      <div class="progress-stats">
+        <div class="stat"><span id="statFound">0</span><label>Found</label></div>
+        <div class="stat"><span id="statProcessed">0</span><label>Processed</label></div>
+        <div class="stat"><span id="statMet">0</span><label>Criteria Met</label></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultsSection" class="hidden">
+    <div class="results-header">
+      <div class="results-title">
+        <h2 id="resultsTitle">Results</h2>
+        <span id="badgeTotal" class="badge badge-blue"></span>
+        <span id="badgeCriteria" class="badge badge-green"></span>
+      </div>
+      <div class="results-actions">
+        <label class="toggle-label">
+          <input type="checkbox" id="criteriaOnlyToggle" onchange="renderTable(currentResults)" />
+          Criteria only
+        </label>
+        <button class="btn btn-outline btn-sm" onclick="exportData('csv')">↓ CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="exportData('excel')">↓ Excel</button>
+        <button class="btn btn-ghost btn-sm" onclick="showEmptyState()">+ New Search</button>
+      </div>
+    </div>
+    <div id="searchParamsBadges" class="param-badges"></div>
+    <div class="table-wrap">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th onclick="sortBy('score')">Score ▾</th>
+            <th onclick="sortBy('company_name')">Company</th>
+            <th onclick="sortBy('distance_miles')">Distance</th>
+            <th onclick="sortBy('company_age_years')">Co. Age</th>
+            <th onclick="sortBy('active_director_count')">Directors</th>
+            <th>Criteria</th>
+            <th>Address</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="directorModal" class="modal hidden">
+    <div class="modal-backdrop" onclick="closeModal()"></div>
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <h3 id="modalCompanyName"></h3>
+      <p id="modalCompanyNum" class="modal-sub"></p>
+      <div id="modalContent"></div>
+    </div>
+  </div>
+
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
