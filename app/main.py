@@ -10,6 +10,7 @@ import logging
 import math
 import os
 import re
+import sys
 import sqlite3
 import threading
 import time
@@ -24,14 +25,25 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-load_dotenv()
-
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 logger = logging.getLogger(__name__)
 
-BASE_DIR   = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATIC_DIR = os.path.join(BASE_DIR, "static")
-DB_PATH    = os.path.join(BASE_DIR, "data", "acquireflow.db")
+# When running as a PyInstaller frozen exe, bundled files (static/) live
+# inside sys._MEIPASS, but user data (.env, data/, exports/) must live
+# next to the .exe so users can edit them.
+if getattr(sys, 'frozen', False):
+    # Frozen exe mode
+    BUNDLE_DIR = sys._MEIPASS                          # bundled assets
+    APP_DIR    = os.path.dirname(sys.executable)       # next to .exe
+else:
+    # Normal Python mode
+    BUNDLE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    APP_DIR    = BUNDLE_DIR
+
+STATIC_DIR = os.path.join(BUNDLE_DIR, "static")
+DB_PATH    = os.path.join(APP_DIR, "data", "acquireflow.db")
+
+load_dotenv(os.path.join(APP_DIR, ".env"))
 
 CH_BASE      = "https://api.company-information.service.gov.uk"
 POSTCODES_IO = "https://api.postcodes.io"

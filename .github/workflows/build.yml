@@ -1,0 +1,62 @@
+name: Build Windows EXE
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build EXE
+        run: pyinstaller acquireflow.spec --noconfirm
+
+      - name: Create release zip
+        run: |
+          mkdir release
+          copy dist\AcquireFlow.exe release\
+          copy .env.example release\
+          copy README.md release\
+          cd release && powershell Compress-Archive -Path * -DestinationPath ..\AcquireFlow-Windows.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AcquireFlow-Windows
+          path: AcquireFlow-Windows.zip
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AcquireFlow-Windows.zip
+          body: |
+            ## AcquireFlow ${{ github.ref_name }}
+
+            ### Quick Start (Windows)
+            1. Download `AcquireFlow-Windows.zip` below
+            2. Extract the zip to any folder
+            3. Open `.env.example`, rename it to `.env`, and paste your [Companies House API key](https://developer.company-information.service.gov.uk)
+            4. Double-click `AcquireFlow.exe`
+            5. Your browser opens to http://localhost:8000 — start searching!
+
+            No Python installation required.
+          generate_release_notes: true

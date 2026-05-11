@@ -5,7 +5,18 @@ No Rust. No compilation. No Visual Studio required.
 
 ---
 
-## Step-by-Step Setup (Windows)
+## Quick Start – Windows EXE (No Python Needed)
+
+1. Go to the [**Releases page**](https://github.com/ub2600/acquireflow/releases/latest)
+2. Download `AcquireFlow-Windows.zip`
+3. Extract the zip to any folder
+4. Rename `.env.example` to `.env` and paste your [Companies House API key](https://developer.company-information.service.gov.uk)
+5. Double-click `AcquireFlow.exe`
+6. Your browser opens to http://localhost:8000 — start searching!
+
+---
+
+## Developer Setup (Python)
 
 ### Step 1 – Get Your Companies House API Key (2 minutes)
 1. Go to: https://developer.company-information.service.gov.uk

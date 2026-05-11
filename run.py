@@ -2,8 +2,16 @@
 """
 AcquireFlow – one-command startup
 Works on Python 3.9+ including 3.14
+Supports running as a PyInstaller frozen .exe
 """
 import os, sys, subprocess, webbrowser, threading, time
+
+
+def _app_dir():
+    """Return the directory where user files (.env, data/) should live."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 
 
 def banner():
@@ -20,13 +28,19 @@ def check_python():
 
 
 def check_env():
-    env_file = os.path.join(os.path.dirname(__file__), ".env")
-    example  = os.path.join(os.path.dirname(__file__), ".env.example")
+    app_dir  = _app_dir()
+    env_file = os.path.join(app_dir, ".env")
+    example  = os.path.join(app_dir, ".env.example")
     if not os.path.exists(env_file):
         if os.path.exists(example):
             import shutil
             shutil.copy(example, env_file)
             print("\n⚠  Created .env from .env.example.")
+        else:
+            # Create a minimal .env for the user to edit
+            with open(env_file, "w") as f:
+                f.write("COMPANIES_HOUSE_API_KEY=your_api_key_here\n")
+            print("\n⚠  Created .env with placeholder key.")
         print("  Please open .env and replace 'your_api_key_here' with your real key.")
         print("  Get a free key: https://developer.company-information.service.gov.uk\n")
     else:
@@ -39,7 +53,11 @@ def check_env():
 
 
 def install_deps():
-    req = os.path.join(os.path.dirname(__file__), "requirements.txt")
+    """Only install deps when running from source (not frozen exe)."""
+    if getattr(sys, 'frozen', False):
+        print("✓ Dependencies bundled")
+        return
+    req = os.path.join(os.path.dirname(os.path.abspath(__file__)), "requirements.txt")
     print("  Installing / verifying dependencies…")
     r = subprocess.run(
         [sys.executable, "-m", "pip", "install", "-r", req, "-q"],
@@ -52,9 +70,9 @@ def install_deps():
 
 
 def ensure_dirs():
-    base = os.path.dirname(__file__)
+    app_dir = _app_dir()
     for d in ("data", "exports"):
-        os.makedirs(os.path.join(base, d), exist_ok=True)
+        os.makedirs(os.path.join(app_dir, d), exist_ok=True)
     print("✓ Directories ready")
 
 
@@ -68,13 +86,16 @@ def open_browser():
 
 def main():
     banner()
-    check_python()
+
+    if not getattr(sys, 'frozen', False):
+        check_python()
+
     check_env()
     install_deps()
     ensure_dirs()
 
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(os.path.join(_app_dir(), ".env"))
 
     print("\n🚀 Starting AcquireFlow on http://127.0.0.1:8000")
     print("   Opening browser automatically…")
@@ -83,7 +104,8 @@ def main():
     threading.Thread(target=open_browser, daemon=True).start()
 
     # Import and run Flask app
-    sys.path.insert(0, os.path.dirname(__file__))
+    if not getattr(sys, 'frozen', False):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from app.main import app, init_db
     init_db()
     app.run(host="127.0.0.1", port=8000, debug=False, threaded=True)
